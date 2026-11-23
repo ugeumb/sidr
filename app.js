@@ -1,4 +1,4 @@
-/* SIDR UGE - Student Internship Daily Report in UGE. Frontend PWA (tanpa build). */
+/* SIDR UGE - Student Internship Daily Report by UGE. Frontend PWA (tanpa build). */
 (function () {
 'use strict';
 
@@ -73,9 +73,13 @@ async function boot() {
   try {
     var d = await api('me');
     S.user = d.user; S.cfg = d.config; S.offset = d.serverMs - Date.now();
+    if (d.token) { S.token = d.token; lsSet('sidr_token', d.token); }
     start();
   } catch (e) {
-    if (S.token) viewLogin(e.message);
+    if (S.token) {
+      APP.innerHTML = '<div class="login"><div class="box"><div class="hd"><img src="icons/logo.png" alt="UMB"><h1>Student Internship Daily Report by UGE</h1></div><div class="card"><div class="msg err">' + esc(e.message) + '</div><button class="btn full mt" id="b-retry">Coba lagi</button></div></div></div>';
+      $('b-retry').onclick = function () { APP.innerHTML = '<div class="boot"><p>Memuat aplikasi...</p></div>'; boot(); };
+    }
   }
 }
 function start() {
@@ -86,8 +90,8 @@ function start() {
 
 /* ---------- login ---------- */
 function viewLogin(m) {
-  document.title = 'SIDR UGE';
-  APP.innerHTML = '<div class="login"><div class="box"><div class="hd"><img src="icons/logo.png" alt="UMB"><h1>Student Internship Daily Report in UGE</h1><p>UMB Global Engagement</p></div>' +
+  document.title = 'Student Internship Daily Report by UGE';
+  APP.innerHTML = '<div class="login"><div class="box"><div class="hd"><img src="icons/logo.png" alt="UMB"><h1>Student Internship Daily Report by UGE</h1><p>UMB Global Engagement</p></div>' +
     '<form class="card" id="f-login" autocomplete="on"><h2>Masuk</h2><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="username" inputmode="email" required>' +
     '<label for="l-pw">Password</label><input id="l-pw" type="password" autocomplete="current-password" required>' +
     '<div id="l-msg">' + (m ? '<div class="msg err">' + esc(m) + '</div>' : (!CFG.API_URL || CFG.API_URL.indexOf('GANTI_') === 0 ? '<div class="msg warn">Backend belum disambungkan. Isi API_URL di config.js.</div>' : '')) + '</div>' +
@@ -136,7 +140,7 @@ function navItems() {
 }
 function shell() {
   var roleLbl = { peserta: 'Peserta Magang', supervisor: 'Supervisor', superadmin: 'Superadmin' }[S.user.role];
-  APP.innerHTML = '<div class="shell"><header class="top"><img src="icons/logo.png" alt="UMB"><div><div class="t1">SIDR UGE</div><div class="t2">' + esc(S.user.nama.split(',')[0]) + ' · ' + roleLbl + '</div></div>' +
+  APP.innerHTML = '<div class="shell"><header class="top"><img src="icons/logo.png" alt="UMB"><div><div class="t1">Student Internship Daily Report by UGE</div><div class="t2">' + esc(S.user.nama.split(',')[0]) + ' · ' + roleLbl + '</div></div>' +
     '<div class="clock"><b id="clk">--:--</b><span id="clkd"></span></div></header><main id="main"></main><nav class="bar" id="nav"></nav></div>';
   $('nav').innerHTML = navItems().map(function (n) { return '<button data-a="nav" data-v="' + n[0] + '" id="nv-' + n[0] + '">' + n[2] + '<span>' + n[1] + '</span></button>'; }).join('');
   go(S.view);
@@ -201,6 +205,21 @@ async function loadHome() {
   if (!S.rep || S.rep.tanggal !== d.tanggal) S.rep = { tanggal: d.tanggal, status: {}, note: {}, own: [] };
   renderHome();
 }
+function dayIndex(tg) { var p = String(tg || '').split('-'); return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000); }
+function dailyCard(tg) {
+  var M = window.SIDR_MOTIV || [], A = window.SIDR_AYAT || [], n = dayIndex(tg || (S.home && S.home.tanggal) || todayStr());
+  if (!M.length || !A.length) return '';
+  var m = M[n % M.length], a = A[n % A.length];
+  return '<div class="card daily"><div class="dq">' + esc(m) + '</div><div class="da" dir="rtl" lang="ar">' + esc(a.ar) + '</div><div class="di">' + esc(a.id) + '</div><div class="dr">' + esc(a.ref) + '</div></div>';
+}
+function todayStr() { var n = nowJkt(); return n.date; }
+function greet(type) {
+  var nm = esc(String(S.user.nama || '').split(',')[0].split(' ')[0]);
+  var h = type === 'masuk' ?
+    '<div class="greet"><h2>Assalamualaikum, ' + nm + '.</h2><p>Terima kasih sudah absen. Awali magang hari ini dengan berdoa ya. Semoga hari ini diberi kelancaran.</p><button class="btn full mt" data-a="closemodal">Aamiin</button></div>' :
+    '<div class="greet"><h2>Alhamdulillah.</h2><p>Terima kasih sudah memberikan dedikasi terbaikmu hari ini di tempat kerja. Selamat kembali ke rumah dan beristirahat. Sampai jumpa esok hari.</p><p class="xs mut">Jangan lupa mengirim laporan KPI harian bila belum.</p><button class="btn full mt" data-a="closemodal">Sampai jumpa</button></div>';
+  var m = modal(h); m.classList.add('center');
+}
 function pillFor(st) {
   var m = { 'Hadir': 'ok', 'Tepat Waktu': 'ok', 'Terkirim': 'ok', 'Terlambat': 'warn', 'Dikembalikan': 'warn', 'Izin': 'warn', 'Sakit': 'warn', 'Tidak Hadir': 'bad', 'Libur': 'info', 'Disetujui': 'ok' };
   return '<span class="pill ' + (m[st] || '') + '">' + esc(st) + '</span>';
@@ -208,7 +227,7 @@ function pillFor(st) {
 function renderHome() {
   var h = S.home, r = h.rec, c = h.config, main = $('main'); if (!main) return;
   var off = r.status === 'Libur' || r.status === 'Izin' || r.status === 'Sakit';
-  var html = '<div class="card"><div class="row sp"><div><h2>' + esc(tgl(h.tanggal)) + '</h2><p class="sm mut">Titik absen: ' + esc(c.lokasi_nama) + ', radius ' + c.radius_m + ' m</p></div><button class="btn ghost sm" data-a="reload">Muat ulang</button></div></div>';
+  var html = dailyCard(h.tanggal) + '<div class="card"><div class="row sp"><div><h2>' + esc(tgl(h.tanggal)) + '</h2><p class="sm mut">Titik absen: ' + esc(c.lokasi_nama) + ', radius ' + c.radius_m + ' m</p></div><button class="btn ghost sm" data-a="reload">Muat ulang</button></div></div>';
   if (!h.workday) html += '<div class="card"><div class="empty">Hari ini bukan hari kerja. Selamat beristirahat.</div></div>';
   else if (off) html += '<div class="card"><div class="row"><h2>Hari ini ' + esc(r.status) + '</h2></div><p class="sm mut mt2">' + esc(r.keterangan || 'Tidak perlu absen dan melapor.') + '</p></div>';
   else {
@@ -283,7 +302,7 @@ async function doCheckin(btn) {
     btn.innerHTML = '<span class="spin"></span> Memverifikasi...';
     var d = await api('checkin', { type: t, lat: p.lat, lng: p.lng, acc: p.acc });
     toast((t === 'masuk' ? 'Absen pagi' : 'Absen sore') + ' berhasil pukul ' + d.jam);
-    await loadHome();
+    await loadHome(); greet(t);
   } catch (e) { msg(mid, 'err', e.message); unBusy(btn); refreshHomeButtons(); }
 }
 async function sendReport(btn) {
@@ -356,7 +375,7 @@ VIEWS.akun = function () {
       '<p class="sm mt2"><b>Android (Chrome):</b> menu ⋮ lalu "Instal aplikasi" atau "Tambahkan ke layar utama".<br><b>iPhone (Safari):</b> tombol Bagikan lalu "Tambah ke Layar Utama".<br><b>Laptop (Chrome/Edge):</b> ikon pasang di kanan kolom alamat.</p>') + '</div>';
   $('main').innerHTML = '<div class="card"><h2>' + esc(u.nama) + '</h2><p class="sm mut">' + esc(u.email) + '</p><p class="mt2"><span class="pill info">' + esc({ peserta: 'Peserta Magang', supervisor: 'Supervisor', superadmin: 'Superadmin' }[u.role]) + '</span></p>' +
     (u.role === 'peserta' && u.sekolah ? '<p class="sm mt2">Sekolah: ' + esc(u.sekolah) + '</p>' : '') + '</div>' + viewChangePw(false) + inst +
-    '<button class="btn red full" data-a="logout">Keluar</button><p class="xs mut mt" style="text-align:center">SIDR UGE · UMB Global Engagement</p>';
+    '<button class="btn red full" data-a="logout">Keluar</button><p class="xs mut mt" style="text-align:center">Student Internship Daily Report by UGE · UMB Global Engagement</p>';
 };
 
 /* ---------- supervisor: hari ini ---------- */
@@ -370,7 +389,7 @@ VIEWS.hariini = async function (tanggal) {
   } catch (e) { $('main').innerHTML = '<div class="card"><div class="msg err">' + esc(e.message) + '</div></div>'; }
 };
 function renderDay() {
-  var r = S.day, h = '<div class="card"><div class="row sp"><button class="btn ghost sm" data-a="daymv" data-n="-1">‹</button><div class="grow" style="text-align:center"><input type="date" id="sd-date" value="' + esc(r.tanggal) + '" style="text-align:center"></div><button class="btn ghost sm" data-a="daymv" data-n="1">›</button></div>' +
+  var r = S.day, h = dailyCard(todayStr()) + '<div class="card"><div class="row sp"><button class="btn ghost sm" data-a="daymv" data-n="-1">‹</button><div class="grow" style="text-align:center"><input type="date" id="sd-date" value="' + esc(r.tanggal) + '" style="text-align:center"></div><button class="btn ghost sm" data-a="daymv" data-n="1">›</button></div>' +
     '<p class="xs mut mt2" style="text-align:center">' + esc(r.hariNama) + (r.workday ? '' : ' · bukan hari kerja') + '</p></div>';
   h += '<div class="card"><h2>Tugas untuk tanggal ini</h2><p class="sm mut mt2">Tulis tugas, lalu pilih siapa yang mengerjakan. Tugas muncul di dashboard peserta.</p><div id="task-list"></div>' +
     '<div class="row wrap mt"><button class="btn sec sm" data-a="addtask">+ Tambah tugas</button></div><div id="t-msg"></div><button class="btn full mt" id="b-savetask" data-a="savetasks">Simpan tugas</button></div>';
@@ -662,9 +681,35 @@ document.addEventListener('change', function (e) {
 /* ---------- PWA ---------- */
 window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); S.installEv = e; if (S.view === 'akun') VIEWS.akun(); });
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  var hadCtl = !!navigator.serviceWorker.controller, reloaded = false;
-  navigator.serviceWorker.register('sw.js').catch(function () { });
+  var hadCtl = !!navigator.serviceWorker.controller, reloaded = false, swReg = null;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (r) { swReg = r; r.update().catch(function () { }); }).catch(function () { });
   navigator.serviceWorker.addEventListener('controllerchange', function () { if (hadCtl && !reloaded) { reloaded = true; location.reload(); } });
 }
+/* Pembaruan otomatis: bandingkan penanda versi berkas utama di server dengan yang sedang dipakai. */
+var verSig = '';
+async function verCheck() {
+  try {
+    var parts = [];
+    for (var f of ['app.js', 'style.css', 'index.html', 'quotes.js']) {
+      var r = await fetch(f + '?_=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+      parts.push((r.headers.get('etag') || '') + (r.headers.get('last-modified') || '') + (r.headers.get('content-length') || ''));
+    }
+    var sig = parts.join('|');
+    if (!verSig) { verSig = sig; return; }
+    if (sig !== verSig) applyUpdate();
+  } catch (e) { }
+}
+function applyUpdate() {
+  var busy = !!$('modal') || !!document.querySelector('.sigwrap.has') || (S.rep && S.rep.own && S.rep.own.length);
+  if (!busy) { location.reload(); return; }
+  if ($('upd')) return;
+  var b = document.createElement('button'); b.id = 'upd'; b.className = 'upd'; b.textContent = 'Versi baru tersedia. Ketuk untuk memperbarui.';
+  b.onclick = function () { location.reload(); }; document.body.appendChild(b);
+}
+verCheck();
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') { verCheck(); if (typeof swReg !== 'undefined' && swReg) swReg.update().catch(function () { }); }
+});
+setInterval(function () { if (document.visibilityState === 'visible') verCheck(); }, 600000);
 boot();
 })();

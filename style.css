@@ -16,7 +16,7 @@ p{margin:0}
 .shell{min-height:100vh;display:flex;flex-direction:column}
 .top{background:var(--g);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 .top img{width:38px;height:38px;border-radius:9px;background:#fff;padding:3px}
-.top .t1{font-weight:700;font-size:15px;line-height:1.1}
+.top .t1{font-weight:700;font-size:13px;line-height:1.15}
 .top .t2{font-size:12px;opacity:.85}
 .top .clock{margin-left:auto;text-align:right;font-variant-numeric:tabular-nums}
 .top .clock b{display:block;font-size:17px}
@@ -136,3 +136,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--g2);box-shadow:0 0 0 
 .prog{height:8px;background:#e8eee9;border-radius:99px;overflow:hidden}
 .prog i{display:block;height:100%;background:var(--g2)}
 @media print{nav.bar,.top{display:none}}
+
+.modal.center{align-items:center}.modal.center .sheet{border-radius:18px;margin:16px;width:auto;max-width:420px;text-align:center}
+.greet h2{font-size:1.25rem;margin-bottom:8px}.greet p{line-height:1.55;margin:6px 0}
+.daily{background:linear-gradient(135deg,#0b5d34,#14803f);color:#fff;border:0}
+.daily .dq{font-weight:600;line-height:1.45;font-size:.98rem}
+.daily .da{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.25);font-size:1.25rem;line-height:1.9;text-align:right;font-family:'Amiri','Scheherazade New','Noto Naskh Arabic','Traditional Arabic',serif}
+.daily .di{margin-top:6px;font-size:.88rem;line-height:1.5;opacity:.95}
+.daily .dr{margin-top:4px;font-size:.78rem;opacity:.8;font-weight:600}
+.upd{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:80;background:#14803f;color:#fff;border:0;border-radius:12px;padding:12px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.25)}
