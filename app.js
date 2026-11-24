@@ -533,12 +533,13 @@ SUBS.pengguna = async function () {
     }).join('');
   } catch (e) { $('sub').innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; }
 };
+function supHas(f, e) { return String(f || '').toLowerCase().split(',').map(function (z) { return z.trim(); }).indexOf(String(e).toLowerCase()) >= 0; }
 function userModal(i) {
   var u = i >= 0 ? S.users[i] : { email: '', nama: '', role: 'peserta', supervisor: '', sekolah: '', guru_email: '', aktif: true };
   var sups = S.users.filter(function (x) { return x.role === 'supervisor' || x.role === 'superadmin'; });
   modal('<h2>' + (i >= 0 ? 'Ubah pengguna' : 'Tambah pengguna') + '</h2><label for="u-email">Email</label><input type="email" id="u-email" value="' + esc(u.email) + '" ' + (i >= 0 ? 'readonly' : '') + '>' +
     '<label for="u-nama">Nama lengkap</label><input type="text" id="u-nama" value="' + esc(u.nama) + '"><label for="u-role">Peran</label><select id="u-role">' + ['peserta', 'supervisor', 'superadmin'].map(function (r) { return '<option ' + (u.role === r ? 'selected' : '') + '>' + r + '</option>'; }).join('') + '</select>' +
-    '<label for="u-sup">Supervisor (untuk peserta)</label><select id="u-sup"><option value="">- semua supervisor -</option>' + sups.map(function (s) { return '<option value="' + esc(s.email) + '" ' + (u.supervisor === s.email ? 'selected' : '') + '>' + esc(s.nama) + '</option>'; }).join('') + '</select>' +
+    '<label>Supervisor pembimbing (untuk peserta)</label><div id="u-sup" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">' + sups.map(function (s) { return '<label class="chip" style="display:flex"><input type="checkbox" class="u-sup-c" value="' + esc(s.email) + '" ' + (supHas(u.supervisor, s.email) ? 'checked' : '') + '>' + esc(s.nama) + '</label>'; }).join('') + '</div><p class="xs mut">Boleh lebih dari satu. Bila tidak ada yang dicentang, peserta terlihat oleh semua supervisor.</p>' +
     '<label for="u-sk">Asal sekolah</label><input type="text" id="u-sk" value="' + esc(u.sekolah) + '"><label for="u-gu">Email guru</label><input type="email" id="u-gu" value="' + esc(u.guru_email) + '">' +
     '<label class="chip" style="display:flex;margin-top:12px"><input type="checkbox" id="u-aktif" ' + (u.aktif ? 'checked' : '') + '>Akun aktif</label>' +
     (i < 0 ? '<p class="xs mut mt2">Password awal 12345, wajib diganti saat login pertama.</p>' : '') +
@@ -628,7 +629,7 @@ var ACT = {
   useredit: function (t) { userModal(+t.dataset.i); },
   usersave: async function (t) {
     setBusy(t, 'Menyimpan...');
-    try { await api('adSaveUser', { email: val('u-email'), nama: val('u-nama'), role: val('u-role'), supervisor: val('u-sup'), sekolah: val('u-sk'), guru_email: val('u-gu'), aktif: $('u-aktif').checked }); closeModal(); toast('Tersimpan.'); SUBS.pengguna(); }
+    try { await api('adSaveUser', { email: val('u-email'), nama: val('u-nama'), role: val('u-role'), supervisor: [].slice.call(document.querySelectorAll('.u-sup-c:checked')).map(function (c) { return c.value; }).join(','), sekolah: val('u-sk'), guru_email: val('u-gu'), aktif: $('u-aktif').checked }); closeModal(); toast('Tersimpan.'); SUBS.pengguna(); }
     catch (e) { msg('u-msg', 'err', e.message); unBusy(t); }
   },
   userreset: async function (t) { if (!confirm('Reset password ' + t.dataset.n + ' ke 12345? Pengguna wajib menggantinya saat login berikutnya.')) return; try { await api('adResetPw', { email: t.dataset.e }); toast('Password direset ke 12345.'); SUBS.pengguna(); } catch (e) { toast(e.message); } },
